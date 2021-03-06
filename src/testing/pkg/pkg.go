@@ -14,6 +14,7 @@
 
 package pkg
 
+//go:generate mockery --case snake --dir ../../pkg/artifact --name Manager --output ./artifact --outpkg artifact
 //go:generate mockery --case snake --dir ../../pkg/blob --name Manager --output ./blob --outpkg blob
 //go:generate mockery --case snake --dir ../../vendor/github.com/docker/distribution --name Manifest --output ./distribution --outpkg distribution
 //go:generate mockery --case snake --dir ../../pkg/project --name Manager --output ./project --outpkg project
@@ -32,3 +33,4 @@ package pkg
 //go:generate mockery --case snake --dir ../../pkg/rbac/dao --name DAO --output ./rbac/dao --outpkg dao
 //go:generate mockery --case snake --dir ../../pkg/robot --name Manager --output ./robot --outpkg robot
 //go:generate mockery --case snake --dir ../../pkg/robot/dao --name DAO --output ./robot/dao --outpkg dao
+//go:generate mockery --case snake --dir ../../pkg/repository/dao --name DAO --output ./repository/dao --outpkg dao

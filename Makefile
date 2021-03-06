@@ -14,7 +14,7 @@
 #
 # build:	build Harbor docker images from photon baseimage
 #
-# install:		include compile binarys, build images, prepare specific \
+# install:		include compile binaries, build images, prepare specific \
 #				version composefile and startup Harbor instance
 #
 # start:		startup Harbor instance
@@ -54,10 +54,10 @@
 # cleanpackage: remove online/offline install package
 #
 # other example:
-#	clean specific version binarys and images:
+#	clean specific version binaries and images:
 #				make clean -e VERSIONTAG=[TAG]
 #				note**: If commit new code to github, the git commit TAG will \
-#				change. Better use this commond clean previous images and \
+#				change. Better use this command clean previous images and \
 #				files with specific TAG.
 #   By default DEVFLAG=true, if you want to release new version of Harbor, \
 #		should setting the flag to false.
@@ -103,8 +103,8 @@ PREPARE_VERSION_NAME=versions
 REGISTRYVERSION=v2.7.1-patch-2819-2553-redis
 NOTARYVERSION=v0.6.1
 NOTARYMIGRATEVERSION=v4.11.0
-TRIVYVERSION=v0.14.0
-TRIVYADAPTERVERSION=v0.17.0
+TRIVYVERSION=v0.16.0
+TRIVYADAPTERVERSION=v0.18.0
 
 # version of chartmuseum
 CHARTMUSEUMVERSION=v0.12.0-redis
@@ -251,8 +251,8 @@ HARBORPKG=harbor
 # pushimage
 PUSHSCRIPTPATH=$(MAKEPATH)
 PUSHSCRIPTNAME=pushimage.sh
-REGISTRYUSER=user
-REGISTRYPASSWORD=default
+REGISTRYUSER=
+REGISTRYPASSWORD=
 
 # cmds
 DOCKERSAVE_PARA=$(DOCKER_IMAGE_NAME_PREPARE):$(VERSIONTAG) \
@@ -411,8 +411,14 @@ build_standalone_db_migrator: compile_standalone_db_migrator
 	make -f $(MAKEFILEPATH_PHOTON)/Makefile _build_standalone_db_migrator -e BASEIMAGETAG=$(BASEIMAGETAG) -e VERSIONTAG=$(VERSIONTAG)
 
 build_base_docker:
+	if [ -n "$(REGISTRYUSER)" ] && [ -n "$(REGISTRYPASSWORD)" ] ; then \
+		docker login -u $(REGISTRYUSER) -p $(REGISTRYPASSWORD) ; \
+	else \
+		echo "No docker credentials provided, please make sure enough priviledges to access docker hub!" ; \
+	fi
 	@for name in chartserver trivy-adapter core db jobservice log nginx notary-server notary-signer portal prepare redis registry registryctl; do \
 		echo $$name ; \
+		sleep 30 ; \
 		$(DOCKERBUILD) --pull --no-cache -f $(MAKEFILEPATH_PHOTON)/$$name/Dockerfile.base -t $(BASEIMAGENAMESPACE)/harbor-$$name-base:$(BASEIMAGETAG) --label base-build-date=$(date +"%Y%m%d") . && \
 		if [ -n "$(PUSHBASEIMAGE)" ] ; then \
 			$(PUSHSCRIPTPATH)/$(PUSHSCRIPTNAME) $(BASEIMAGENAMESPACE)/harbor-$$name-base:$(BASEIMAGETAG) $(REGISTRYUSER) $(REGISTRYPASSWORD) || exit 1; \

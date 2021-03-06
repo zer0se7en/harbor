@@ -28,7 +28,7 @@ def get_endpoint():
 
 def _create_client(server, credential, debug, api_type="products"):
     cfg = None
-    if api_type in ('projectv2', 'artifact', 'repository', 'scan', 'scanall', 'preheat', 'replication', 'robot', 'gc', 'retention'):
+    if api_type in ('projectv2', 'artifact', 'repository', 'scanner', 'scan', 'scanall', 'preheat', 'quota', 'replication', 'robot', 'gc', 'retention'):
         cfg = v2_swagger_client.Configuration()
     else:
         cfg = swagger_client.Configuration()
@@ -56,10 +56,11 @@ def _create_client(server, credential, debug, api_type="products"):
         "projectv2":  v2_swagger_client.ProjectApi(v2_swagger_client.ApiClient(cfg)),
         "artifact":   v2_swagger_client.ArtifactApi(v2_swagger_client.ApiClient(cfg)),
         "preheat":   v2_swagger_client.PreheatApi(v2_swagger_client.ApiClient(cfg)),
+        "quota":   v2_swagger_client.QuotaApi(v2_swagger_client.ApiClient(cfg)),
         "repository": v2_swagger_client.RepositoryApi(v2_swagger_client.ApiClient(cfg)),
         "scan": v2_swagger_client.ScanApi(v2_swagger_client.ApiClient(cfg)),
         "scanall": v2_swagger_client.ScanAllApi(v2_swagger_client.ApiClient(cfg)),
-        "scanner": swagger_client.ScannersApi(swagger_client.ApiClient(cfg)),
+        "scanner": v2_swagger_client.ScannerApi(v2_swagger_client.ApiClient(cfg)),
         "replication": v2_swagger_client.ReplicationApi(v2_swagger_client.ApiClient(cfg)),
         "robot": v2_swagger_client.RobotApi(v2_swagger_client.ApiClient(cfg)),
         "gc":   v2_swagger_client.GcApi(v2_swagger_client.ApiClient(cfg)),
@@ -90,6 +91,20 @@ def _get_string_from_unicode(udata):
         tmp = u.encode('utf8')
         result = result + tmp.strip('\n\r\t')
     return result
+
+def run_command_with_popen(command):
+    print("Command: ", subprocess.list2cmdline(command))
+
+    try:
+        proc = subprocess.Popen(command, universal_newlines=True, shell=True,
+                            stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        output, errors = proc.communicate()
+    except Exception as e:
+        print("Error:", e)
+    else:
+        print(proc.returncode, errors, output)
+    finally:
+        proc.stdout.close()
 
 def run_command(command, expected_error_message = None):
     print("Command: ", subprocess.list2cmdline(command))

@@ -10,7 +10,14 @@ set -e
 if [ -z "$1" ]; then echo no ip specified; exit 1;fi
 # prepare cert ...
 sudo ./tests/generateCerts.sh $1
-sudo apt-get install -y python-pip && sudo pip install --ignore-installed urllib3 chardet requests --upgrade
+
+python --version
+pip -V
+cat /etc/issue
+cat /proc/version
+sudo -H pip install --ignore-installed urllib3 chardet requests --upgrade
+python --version
+
 sudo ./tests/hostcfg.sh
 
 if [ "$2" = 'LDAP' ]; then

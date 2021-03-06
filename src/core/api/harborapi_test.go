@@ -122,7 +122,6 @@ func init() {
 	beego.Router("/api/labels", &LabelAPI{}, "post:Post;get:List")
 	beego.Router("/api/labels/:id([0-9]+", &LabelAPI{}, "get:Get;put:Put;delete:Delete")
 	beego.Router("/api/system/CVEAllowlist", &SysCVEAllowlistAPI{}, "get:Get;put:Put")
-	beego.Router("/api/system/oidc/ping", &OIDCAPI{}, "post:Ping")
 
 	beego.Router("/api/replication/adapters", &ReplicationAdapterAPI{}, "get:List")
 
@@ -157,24 +156,8 @@ func init() {
 	beego.Router("/api/"+api.APIVersion+"/chartrepo/:repo/charts/:name/:version/labels", chartLabelAPIType, "get:GetLabels;post:MarkLabel")
 	beego.Router("/api/"+api.APIVersion+"/chartrepo/:repo/charts/:name/:version/labels/:id([0-9]+)", chartLabelAPIType, "delete:RemoveLabel")
 
-	quotaAPIType := &QuotaAPI{}
-	beego.Router("/api/quotas", quotaAPIType, "get:List")
-	beego.Router("/api/quotas/:id([0-9]+)", quotaAPIType, "get:Get;put:Put")
-
 	beego.Router("/api/internal/switchquota", &InternalAPI{}, "put:SwitchQuota")
 	beego.Router("/api/internal/syncquota", &InternalAPI{}, "post:SyncQuota")
-
-	// Add routes for plugin scanner management
-	scannerAPI := &ScannerAPI{}
-	beego.Router("/api/scanners", scannerAPI, "post:Create;get:List")
-	beego.Router("/api/scanners/:uuid", scannerAPI, "get:Get;delete:Delete;put:Update;patch:SetAsDefault")
-	beego.Router("/api/scanners/:uuid/metadata", scannerAPI, "get:Metadata")
-	beego.Router("/api/scanners/ping", scannerAPI, "post:Ping")
-
-	// Add routes for project level scanner
-	proScannerAPI := &ProjectScannerAPI{}
-	beego.Router("/api/projects/:pid([0-9]+)/scanner", proScannerAPI, "get:GetProjectScanner;put:SetProjectScanner")
-	beego.Router("/api/projects/:pid([0-9]+)/scanner/candidates", proScannerAPI, "get:GetProScannerCandidates")
 
 	// Init user Info
 	admin = &usrInfo{adminName, adminPwd}
@@ -917,56 +900,4 @@ func (a testapi) RegistryUpdate(authInfo usrInfo, registryID int64, req *apimode
 	}
 
 	return code, nil
-}
-
-// QuotasGet returns quotas
-func (a testapi) QuotasGet(query *apilib.QuotaQuery, authInfo ...usrInfo) (int, []apilib.Quota, error) {
-	_sling := sling.New().Get(a.basePath).
-		Path("api/quotas").
-		QueryStruct(query)
-
-	var successPayload []apilib.Quota
-
-	var httpStatusCode int
-	var err error
-	var body []byte
-	if len(authInfo) > 0 {
-		httpStatusCode, body, err = request(_sling, jsonAcceptHeader, authInfo[0])
-	} else {
-		httpStatusCode, body, err = request(_sling, jsonAcceptHeader)
-	}
-
-	if err == nil && httpStatusCode == 200 {
-		err = json.Unmarshal(body, &successPayload)
-	} else {
-		log.Println(string(body))
-	}
-
-	return httpStatusCode, successPayload, err
-}
-
-// Return specific quota
-func (a testapi) QuotasGetByID(authInfo usrInfo, quotaID string) (int, apilib.Quota, error) {
-	_sling := sling.New().Get(a.basePath)
-
-	// create api path
-	path := "api/quotas/" + quotaID
-	_sling = _sling.Path(path)
-
-	var successPayload apilib.Quota
-
-	httpStatusCode, body, err := request(_sling, jsonAcceptHeader, authInfo)
-	if err == nil && httpStatusCode == 200 {
-		err = json.Unmarshal(body, &successPayload)
-	}
-	return httpStatusCode, successPayload, err
-}
-
-// Update spec for the quota
-func (a testapi) QuotasPut(authInfo usrInfo, quotaID string, req QuotaUpdateRequest) (int, error) {
-	path := "/api/quotas/" + quotaID
-	_sling := sling.New().Put(a.basePath).Path(path).BodyJSON(req)
-
-	httpStatusCode, _, err := request(_sling, jsonAcceptHeader, authInfo)
-	return httpStatusCode, err
 }

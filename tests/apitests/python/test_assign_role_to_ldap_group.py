@@ -10,7 +10,6 @@ from library.user import User
 from library.repository import Repository
 from library.repository import push_image_to_project
 from library.artifact import Artifact
-from library.scanner import Scanner
 from library.configurations import Configurations
 from library.projectV2 import ProjectV2
 
@@ -44,7 +43,7 @@ class TestAssignRoleToLdapGroup(unittest.TestCase):
             9. Delete project(PA);
         """
         url = ADMIN_CLIENT["endpoint"]
-        USER_ADMIN=dict(endpoint = url, username = "admin_user", password = "zhu88jie", repo = "hello-world")
+        USER_ADMIN=dict(endpoint = url, username = "admin_user", password = "zhu88jie", repo = "haproxy")
         USER_DEV=dict(endpoint = url, username = "dev_user", password = "zhu88jie", repo = "alpine")
         USER_GUEST=dict(endpoint = url, username = "guest_user", password = "zhu88jie", repo = "busybox")
         USER_TEST=dict(endpoint = url, username = "test", password = "123456")
