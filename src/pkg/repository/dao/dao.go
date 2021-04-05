@@ -17,12 +17,13 @@ package dao
 import (
 	"context"
 	"fmt"
+	"time"
+
 	o "github.com/astaxie/beego/orm"
 	"github.com/goharbor/harbor/src/common/models"
 	"github.com/goharbor/harbor/src/lib/errors"
 	"github.com/goharbor/harbor/src/lib/orm"
 	"github.com/goharbor/harbor/src/lib/q"
-	"time"
 )
 
 // DAO is the data access object interface for repository
@@ -53,13 +54,7 @@ func New() DAO {
 type dao struct{}
 
 func (d *dao) Count(ctx context.Context, query *q.Query) (int64, error) {
-	if query != nil {
-		// ignore the page number and size
-		query = &q.Query{
-			Keywords: query.Keywords,
-		}
-	}
-	qs, err := orm.QuerySetter(ctx, &models.RepoRecord{}, query)
+	qs, err := orm.QuerySetterForCount(ctx, &models.RepoRecord{}, query)
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +66,6 @@ func (d *dao) List(ctx context.Context, query *q.Query) ([]*models.RepoRecord, e
 	if err != nil {
 		return nil, err
 	}
-	qs = qs.OrderBy("-CreationTime", "RepositoryID")
 	if _, err = qs.All(&repositories); err != nil {
 		return nil, err
 	}
@@ -166,7 +160,7 @@ func (d *dao) NonEmptyRepos(ctx context.Context) ([]*models.RepoRecord, error) {
 		return nil, err
 	}
 
-	sql := fmt.Sprintf(`select r.* from repository as r LEFT JOIN tag as t on r.repository_id = t.repository_id where t.repository_id is not null;`)
+	sql := fmt.Sprintf(`select distinct r.* from repository as r LEFT JOIN tag as t on r.repository_id = t.repository_id where t.repository_id is not null;`)
 	_, err = ormer.Raw(sql).QueryRows(&repos)
 	if err != nil {
 		return repos, err

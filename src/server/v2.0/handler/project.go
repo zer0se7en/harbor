@@ -31,6 +31,7 @@ import (
 	"github.com/goharbor/harbor/src/controller/p2p/preheat"
 	"github.com/goharbor/harbor/src/controller/project"
 	"github.com/goharbor/harbor/src/controller/quota"
+	"github.com/goharbor/harbor/src/controller/registry"
 	"github.com/goharbor/harbor/src/controller/repository"
 	"github.com/goharbor/harbor/src/controller/retention"
 	"github.com/goharbor/harbor/src/controller/scanner"
@@ -47,7 +48,6 @@ import (
 	"github.com/goharbor/harbor/src/pkg/retention/policy"
 	"github.com/goharbor/harbor/src/pkg/robot"
 	"github.com/goharbor/harbor/src/pkg/user"
-	"github.com/goharbor/harbor/src/replication"
 	"github.com/goharbor/harbor/src/server/v2.0/handler/model"
 	"github.com/goharbor/harbor/src/server/v2.0/models"
 	operation "github.com/goharbor/harbor/src/server/v2.0/restapi/operations/project"
@@ -260,7 +260,7 @@ func (a *projectAPI) GetLogs(ctx context.Context, params operation.GetLogsParams
 	if err != nil {
 		return a.SendError(ctx, err)
 	}
-	query, err := a.BuildQuery(ctx, params.Q, params.Page, params.PageSize)
+	query, err := a.BuildQuery(ctx, params.Q, params.Sort, params.Page, params.PageSize)
 	if err != nil {
 		return a.SendError(ctx, err)
 	}
@@ -378,10 +378,10 @@ func (a *projectAPI) HeadProject(ctx context.Context, params operation.HeadProje
 }
 
 func (a *projectAPI) ListProjects(ctx context.Context, params operation.ListProjectsParams) middleware.Responder {
-	query := q.New(q.KeyWords{})
-	query.Sorting = "name"
-	query.PageNumber = *params.Page
-	query.PageSize = *params.PageSize
+	query, err := a.BuildQuery(ctx, params.Q, params.Sort, params.Page, params.PageSize)
+	if err != nil {
+		return a.SendError(ctx, err)
+	}
 
 	if name := lib.StringValue(params.Name); name != "" {
 		query.Keywords["name"] = &q.FuzzyMatchValue{Value: name}
@@ -530,7 +530,7 @@ func (a *projectAPI) ListScannerCandidatesOfProject(ctx context.Context, params 
 		return a.SendError(ctx, err)
 	}
 
-	query, err := a.BuildQuery(ctx, params.Q, params.Page, params.PageSize, params.Sort)
+	query, err := a.BuildQuery(ctx, params.Q, params.Sort, params.Page, params.PageSize)
 	if err != nil {
 		return a.SendError(ctx, err)
 	}
@@ -611,12 +611,9 @@ func (a *projectAPI) validateProjectReq(ctx context.Context, req *models.Project
 			return errors.BadRequestError(fmt.Errorf("%d is invalid value of registry_id, it should be geater than 0", *req.RegistryID))
 		}
 
-		registry, err := replication.RegistryMgr.Get(*req.RegistryID)
+		registry, err := registry.Ctl.Get(ctx, *req.RegistryID)
 		if err != nil {
 			return fmt.Errorf("failed to get the registry %d: %v", *req.RegistryID, err)
-		}
-		if registry == nil {
-			return errors.NotFoundError(fmt.Errorf("registry %d not found", *req.RegistryID))
 		}
 		permitted := false
 		for _, t := range config.GetPermittedRegistryTypesForProxyCache() {
@@ -643,7 +640,7 @@ func (a *projectAPI) validateProjectReq(ctx context.Context, req *models.Project
 func (a *projectAPI) populateProperties(ctx context.Context, p *project.Project) error {
 	if secCtx, ok := security.FromContext(ctx); ok {
 		if sc, ok := secCtx.(*local.SecurityContext); ok {
-			roles, err := pro.ListRoles(sc.User(), p.ProjectID)
+			roles, err := a.projectCtl.ListRoles(ctx, p.ProjectID, sc.User())
 			if err != nil {
 				return err
 			}
@@ -734,7 +731,7 @@ func getProjectRegistrySummary(ctx context.Context, p *project.Project, summary 
 		return
 	}
 
-	registry, err := replication.RegistryMgr.Get(p.RegistryID)
+	registry, err := registry.Ctl.Get(ctx, p.RegistryID)
 	if err != nil {
 		log.Warningf("failed to get registry %d: %v", p.RegistryID, err)
 	} else if registry != nil {

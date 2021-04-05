@@ -56,14 +56,22 @@ func (*BaseAPI) SendError(ctx context.Context, err error) middleware.Responder {
 	return NewErrResponder(err)
 }
 
-// HasPermission returns true when the request has action permission on resource
-func (*BaseAPI) HasPermission(ctx context.Context, action rbac.Action, resource rbac.Resource) bool {
-	s, ok := security.FromContext(ctx)
+// GetSecurityContext from the provided context
+func (*BaseAPI) GetSecurityContext(ctx context.Context) (security.Context, error) {
+	sc, ok := security.FromContext(ctx)
 	if !ok {
-		log.Warningf("security not found in the context")
+		return nil, errors.UnauthorizedError(errors.New("security context not found"))
+	}
+	return sc, nil
+}
+
+// HasPermission returns true when the request has action permission on resource
+func (b *BaseAPI) HasPermission(ctx context.Context, action rbac.Action, resource rbac.Resource) bool {
+	s, err := b.GetSecurityContext(ctx)
+	if err != nil {
+		log.Warningf("security context not found")
 		return false
 	}
-
 	return s.Can(ctx, action, resource)
 }
 
@@ -98,9 +106,9 @@ func (b *BaseAPI) RequireProjectAccess(ctx context.Context, projectIDOrName inte
 	if b.HasProjectPermission(ctx, projectIDOrName, action, subresource...) {
 		return nil
 	}
-	secCtx, ok := security.FromContext(ctx)
-	if !ok {
-		return errors.UnauthorizedError(errors.New("security context not found"))
+	secCtx, err := b.GetSecurityContext(ctx)
+	if err != nil {
+		return err
 	}
 	if !secCtx.IsAuthenticated() {
 		return errors.UnauthorizedError(nil)
@@ -110,9 +118,9 @@ func (b *BaseAPI) RequireProjectAccess(ctx context.Context, projectIDOrName inte
 
 // RequireSystemAccess checks the system admin permission according to the security context
 func (b *BaseAPI) RequireSystemAccess(ctx context.Context, action rbac.Action, subresource ...rbac.Resource) error {
-	secCtx, ok := security.FromContext(ctx)
-	if !ok {
-		return errors.UnauthorizedError(errors.New("security context not found"))
+	secCtx, err := b.GetSecurityContext(ctx)
+	if err != nil {
+		return err
 	}
 	if !secCtx.IsAuthenticated() {
 		return errors.UnauthorizedError(nil)
@@ -126,9 +134,9 @@ func (b *BaseAPI) RequireSystemAccess(ctx context.Context, action rbac.Action, s
 
 // RequireAuthenticated checks it's authenticated according to the security context
 func (b *BaseAPI) RequireAuthenticated(ctx context.Context) error {
-	secCtx, ok := security.FromContext(ctx)
-	if !ok {
-		return errors.UnauthorizedError(errors.New("security context not found"))
+	secCtx, err := b.GetSecurityContext(ctx)
+	if err != nil {
+		return err
 	}
 	if !secCtx.IsAuthenticated() {
 		return errors.UnauthorizedError(nil)
@@ -137,14 +145,18 @@ func (b *BaseAPI) RequireAuthenticated(ctx context.Context) error {
 }
 
 // BuildQuery builds the query model according to the query string
-func (b *BaseAPI) BuildQuery(ctx context.Context, query *string, pageNumber, pageSize *int64, sorts ...*string) (*q.Query, error) {
+func (b *BaseAPI) BuildQuery(ctx context.Context, query, sort *string, pageNumber, pageSize *int64) (*q.Query, error) {
 	var (
 		qs string
+		st string
 		pn int64
 		ps int64
 	)
 	if query != nil {
 		qs = *query
+	}
+	if sort != nil {
+		st = *sort
 	}
 	if pageNumber != nil {
 		pn = *pageNumber
@@ -152,17 +164,7 @@ func (b *BaseAPI) BuildQuery(ctx context.Context, query *string, pageNumber, pag
 	if pageSize != nil {
 		ps = *pageSize
 	}
-
-	r, err := q.Build(qs, pn, ps)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(sorts) > 0 {
-		r.Sorting = lib.StringValue(sorts[0])
-	}
-
-	return r, nil
+	return q.Build(qs, st, pn, ps)
 }
 
 // Links return Links based on the provided pagination information

@@ -90,6 +90,18 @@ Switch To LDAP
     Should Be Equal As Integers  ${rc}  0
     Generate Certificate Authority For Chrome
 
+Get Harbor CA
+    [Arguments]  ${ip}  ${cert}
+    Log All  Start to get harbor ca: ${ip} ${cert}
+    Run Keyword If  '${http_get_ca}' == 'false'  Run Keywords
+    ...  Wait Unitl Command Success  cp /ca/harbor_ca.crt ${cert}
+    ...  AND  Return From Keyword
+    ${rc}  ${output}=  Run And Return Rc And Output  rm -rf ~/.docker/
+    Log All  ${rc}
+    ${rc}  ${output}=  Run And Return Rc and Output  curl -o ${cert} -s -k -X GET -u 'admin:Harbor12345' 'https://${ip}/api/v2.0/systeminfo/getcert'
+    Log All  ${output}
+    Should Be Equal As Integers  ${rc}  0
+
 Enable Notary Client
     ${rc}  ${output}=  Run And Return Rc And Output  rm -rf ~/.docker/
     Log  ${rc}
@@ -97,9 +109,16 @@ Enable Notary Client
     Log  ${output}
     Should Be Equal As Integers  ${rc}  0
 
-Remove Notary Signature
-    [Arguments]  ${ip}  ${image}
-    ${rc}  ${output}=  Run And Return Rc And Output  ./tests/robot-cases/Group0-Util/notary-remove-image-signature.expect ${ip} library ${image} ${notaryServerEndpoint}
+Notary Remove Signature
+    [Arguments]  ${ip}  ${project}  ${image}  ${tag}  ${user}  ${pwd}
+    ${rc}  ${output}=  Run And Return Rc And Output  ./tests/robot-cases/Group0-Util/notary-util.sh remove ${ip} ${project} ${image} ${tag} ${notaryServerEndpoint} ${user} ${pwd}
+    Log To Console  ${output}
+    Log  ${output}
+    Should Be Equal As Integers  ${rc}  0
+
+Notary Key Rotate
+    [Arguments]  ${ip}  ${project}  ${image}  ${tag}  ${user}  ${pwd}
+    ${rc}  ${output}=  Run And Return Rc And Output  ./tests/robot-cases/Group0-Util/notary-util.sh key_rotate ${ip} ${project} ${image} ${tag} ${notaryServerEndpoint} ${user} ${pwd}
     Log To Console  ${output}
     Log  ${output}
     Should Be Equal As Integers  ${rc}  0

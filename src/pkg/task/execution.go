@@ -63,6 +63,9 @@ type ExecutionManager interface {
 	StopAndWait(ctx context.Context, id int64, timeout time.Duration) (err error)
 	// Delete the specified execution and its tasks
 	Delete(ctx context.Context, id int64) (err error)
+	// Delete all executions and tasks of the specific vendor. They can be deleted only when all the executions/tasks
+	// of the vendor are in final status
+	DeleteByVendor(ctx context.Context, vendorType string, vendorID int64) (err error)
 	// Get the specified execution
 	Get(ctx context.Context, id int64) (execution *Execution, err error)
 	// List executions according to the query
@@ -136,31 +139,53 @@ func (e *executionManager) Create(ctx context.Context, vendorType string, vendor
 }
 
 func (e *executionManager) sweep(ctx context.Context, vendorType string, vendorID int64) error {
-	count := executionSweeperCount[vendorType]
-	if count == 0 {
-		log.Debugf("the execution sweeper count doesn't set for %s, skip sweep", vendorType)
+	size := int64(executionSweeperCount[vendorType])
+	if size == 0 {
+		log.Debugf("the execution sweeper size doesn't set for %s, skip sweep", vendorType)
 		return nil
 	}
 
-	for {
-		// the function "List" of the execution manager returns the execution records
-		// ordered by start time. After the sorting is supported in query, we should
-		// specify the sorting explicitly
-		// the execution records in second page are always the candidates should to be swept
-		executions, err := e.List(ctx, &q.Query{
-			Keywords: map[string]interface{}{
-				"VendorType": vendorType,
-				"VendorID":   vendorID,
-			},
-			PageNumber: 2,
-			PageSize:   int64(count),
-		})
+	// get the #size execution record
+	query := &q.Query{
+		Keywords: map[string]interface{}{
+			"VendorType": vendorType,
+			"VendorID":   vendorID,
+		},
+		Sorts: []*q.Sort{
+			{
+				Key:  "StartTime",
+				DESC: true,
+			}},
+		PageSize:   1,
+		PageNumber: size,
+	}
+	executions, err := e.executionDAO.List(ctx, query)
+	if err != nil {
+		return err
+	}
+	// list is null means that the execution count < size, return directly
+	if len(executions) == 0 {
+		return nil
+	}
+
+	query.Keywords["StartTime"] = &q.Range{
+		Max: executions[0].StartTime,
+	}
+	totalOfCandidate, err := e.executionDAO.Count(ctx, query)
+	if err != nil {
+		return err
+	}
+	// n is the page count of all candidates
+	n := totalOfCandidate / 1000
+	if totalOfCandidate%1000 > 0 {
+		n = n + 1
+	}
+	query.PageSize = 1000
+	for i := n; i >= 1; i-- {
+		query.PageNumber = i
+		executions, err := e.List(ctx, query)
 		if err != nil {
 			return err
-		}
-		// no execution records need to be swept, return directly
-		if len(executions) == 0 {
-			return nil
 		}
 		for _, execution := range executions {
 			// if the status of the execution isn't final, skip
@@ -176,6 +201,7 @@ func (e *executionManager) sweep(ctx context.Context, vendorType string, vendorI
 			}
 		}
 	}
+	return nil
 }
 
 func (e *executionManager) UpdateExtraAttrs(ctx context.Context, id int64, extraAttrs map[string]interface{}) error {
@@ -222,7 +248,7 @@ func (e *executionManager) Stop(ctx context.Context, id int64) error {
 	}
 
 	// when an execution is in final status, if it contains task that is a periodic or retrying job it will
-	// run again in the near future, so we must operate the stop action
+	// run again in the near future, so we must operate the stop action no matter the status is final or not
 	tasks, err := e.taskDAO.List(ctx, &q.Query{
 		Keywords: map[string]interface{}{
 			"ExecutionID": id,
@@ -231,15 +257,23 @@ func (e *executionManager) Stop(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	// contains no task and the status isn't final, update the status to stop directly
-	if len(tasks) == 0 && !job.Status(execution.Status).Final() {
+	if len(tasks) == 0 {
+		// in final status, return directly
+		if job.Status(execution.Status).Final() {
+			return nil
+		}
+		// isn't in final status, update directly.
+		// as this is used for the corner case(the case that the execution exists but all tasks are disappeared. In normal
+		// cases, if the execution contains no tasks, it is already set as "success" by the upper level caller directly),
+		// no need to handle concurrency
 		now := time.Now()
 		return e.executionDAO.Update(ctx, &dao.Execution{
 			ID:         id,
 			Status:     job.StoppedStatus.String(),
+			Revision:   execution.Revision + 1,
 			UpdateTime: now,
 			EndTime:    now,
-		}, "Status", "UpdateTime", "EndTime")
+		}, "Status", "Revision", "UpdateTime", "EndTime")
 	}
 
 	for _, task := range tasks {
@@ -248,10 +282,6 @@ func (e *executionManager) Stop(ctx context.Context, id int64) error {
 			continue
 		}
 	}
-
-	// refresh the status explicitly in case that the execution status
-	// isn't refreshed by task status change hook
-	_, _, err = e.executionDAO.RefreshStatus(ctx, id)
 	return err
 }
 
@@ -328,6 +358,34 @@ func (e *executionManager) Delete(ctx context.Context, id int64) error {
 	}
 
 	return e.executionDAO.Delete(ctx, id)
+}
+
+func (e *executionManager) DeleteByVendor(ctx context.Context, vendorType string, vendorID int64) error {
+	executions, err := e.executionDAO.List(ctx, &q.Query{
+		Keywords: map[string]interface{}{
+			"VendorType": vendorType,
+			"VendorID":   vendorID,
+		}})
+	if err != nil {
+		return err
+	}
+	// check the status
+	for _, execution := range executions {
+		if !job.Status(execution.Status).Final() {
+			return errors.New(nil).WithCode(errors.PreconditionCode).
+				WithMessage("contains executions that aren't in final status, stop the execution first")
+		}
+	}
+	// delete the executions
+	for _, execution := range executions {
+		if err = e.Delete(ctx, execution.ID); err != nil {
+			if errors.IsNotFoundErr(err) {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 func (e *executionManager) Get(ctx context.Context, id int64) (*Execution, error) {

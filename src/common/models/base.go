@@ -31,10 +31,7 @@ func init() {
 		new(UserGroup),
 		new(JobLog),
 		new(OIDCUser),
-		new(NotificationPolicy),
-		new(NotificationJob),
 		new(ProjectBlob),
 		new(ArtifactAndBlob),
-		new(CVEAllowlist),
 	)
 }

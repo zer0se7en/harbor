@@ -168,7 +168,8 @@ export class ReplicationComponent implements OnInit, OnDestroy {
           switchMap( ruleName => {
             this.listReplicationRule.loading = true;
             this.listReplicationRule.page = 1;
-            return this.replicationService.getReplicationRulesResponse(ruleName);
+            return this.replicationService
+                .getReplicationRulesResponse(ruleName, this.listReplicationRule.page, this.listReplicationRule.pageSize);
           })
       ).subscribe(response => {
               this.hideJobs();
@@ -176,7 +177,7 @@ export class ReplicationComponent implements OnInit, OnDestroy {
               if (response.headers) {
                   let xHeader: string = response.headers.get("x-total-count");
                   if (xHeader) {
-                      this.totalCount = parseInt(xHeader, 0);
+                    this.listReplicationRule.totalCount = parseInt(xHeader, 0);
                   }
               }
               this.listReplicationRule.selectedRow = null; // Clear selection
@@ -477,8 +478,12 @@ export class ReplicationComponent implements OnInit, OnDestroy {
 
   refreshRules() {
     this.search.ruleName = "";
-    this.filterComponent.currentValue = "";
-    this.listReplicationRule.refreshRule();
+    if (this.filterComponent.currentValue) {
+      this.filterComponent.currentValue = "";
+      this.filterComponent.filterTerms.next(''); // will trigger refreshing
+    } else {
+      this.listReplicationRule.refreshRule(); // manually refresh
+    }
   }
 
   refreshJobs() {
@@ -496,11 +501,7 @@ export class ReplicationComponent implements OnInit, OnDestroy {
   }
 
   openFilter(isOpen: boolean): void {
-    if (isOpen) {
-      this.isOpenFilterTag = true;
-    } else {
-      this.isOpenFilterTag = false;
-    }
+    this.isOpenFilterTag = isOpen;
   }
   getDuration(j: ReplicationJobItem) {
     if (!j) {

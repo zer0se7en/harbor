@@ -153,22 +153,34 @@ Body Of List Helm Charts
     Multi-delete Chart Files  ${prometheus_chart_name}  ${harbor_chart_name}
     Close Browser
 
+Body Of Push Signed Image
+    Init Chrome Driver
+    ${d}=  Get Current Date    result_format=%m%s
+    ${user}=  Set Variable  user010
+    ${pwd}=   Set Variable  Test1@34
+    Sign In Harbor  ${HARBOR_URL}  ${user}  ${pwd}
+    Create An New Project And Go Into Project  project${d}
+    Body Of Admin Push Signed Image  project${d}  tomcat  latest  ${user}  ${pwd}
+    Body Of Admin Push Signed Image  project${d}  alpine  latest  ${HARBOR_ADMIN}  ${HARBOR_PASSWORD}
+    Close Browser
+
 Body Of Admin Push Signed Image
-    [Arguments]  ${image}=tomcat  ${project}=library  ${with_remove}=${false}
+    [Arguments]  ${project}  ${image}  ${tag}  ${user}  ${pwd}  ${with_remove}=${false}
     Enable Notary Client
 
     Docker Pull  ${LOCAL_REGISTRY}/${LOCAL_REGISTRY_NAMESPACE}/${image}
-    ${rc}  ${output}=  Run And Return Rc And Output  ./tests/robot-cases/Group0-Util/notary-push-image.sh ${ip} ${project} ${image} latest ${notaryServerEndpoint} ${LOCAL_REGISTRY}/${LOCAL_REGISTRY_NAMESPACE}/${image}:latest
+    ${rc}  ${output}=  Run And Return Rc And Output  ./tests/robot-cases/Group0-Util/notary-push-image.sh ${ip} ${project} ${image} ${tag} ${notaryServerEndpoint} ${LOCAL_REGISTRY}/${LOCAL_REGISTRY_NAMESPACE}/${image}:${tag} ${user} ${pwd}
+    Clean All Local Images
     Log  ${output}
     Should Be Equal As Integers  ${rc}  0
 
-    ${rc}  ${output}=  Run And Return Rc And Output  curl -u admin:Harbor12345 -s --insecure -H "Content-Type: application/json" -X GET "https://${ip}/api/v2.0/projects/${project}/repositories/${image}/artifacts/latest?with_signature=true"
+    ${rc}  ${output}=  Run And Return Rc And Output  curl -u admin:Harbor12345 -s --insecure -H "Content-Type: application/json" -X GET "https://${ip}/api/v2.0/projects/${project}/repositories/${image}/artifacts/${tag}?with_signature=true"
 
     Log To Console  ${output}
     Should Be Equal As Integers  ${rc}  0
     Should Contain  ${output}  "signed":true
 
-    Run Keyword If  ${with_remove} == ${true}  Remove Notary Signature  ${ip}  ${image}
+    Run Keyword If  ${with_remove} == ${true}  Notary Remove Signature  ${ip}  ${project}  ${image}  ${tag}  ${user}  ${pwd}
 
 Delete A Project Without Sign In Harbor
     [Arguments]  ${harbor_ip}=${ip}  ${username}=${HARBOR_ADMIN}  ${password}=${HARBOR_PASSWORD}
@@ -350,7 +362,7 @@ Body Of Replication Of Push Images to Registry Triggered By Event
     Executions Result Count Should Be  Succeeded  event_based  2
 
 Body Of Replication Of Pull Images from Registry To Self
-    [Arguments]  ${provider}  ${endpoint}  ${username}  ${pwd}  ${src_project_name}  ${des_project_name}  @{target_images}
+    [Arguments]  ${provider}  ${endpoint}  ${username}  ${pwd}  ${src_project_name}  ${des_project_name}  ${verify_verbose}  @{target_images}
     Init Chrome Driver
     ${d}=    Get Current Date    result_format=%m%s
     ${_des_pro_name}=  Set Variable If  '${des_project_name}'=='${null}'  project${d}  ${des_project_name}
@@ -360,10 +372,30 @@ Body Of Replication Of Pull Images from Registry To Self
     Switch To Registries
     Create A New Endpoint    ${provider}    e${d}    ${endpoint}    ${username}    ${pwd}    Y
     Switch To Replication Manage
-    Create A Rule With Existing Endpoint  rule${d}  pull  ${src_project_name}  image  e${d}  ${_des_pro_name}
+    Create A Rule With Existing Endpoint  rule${d}  pull  ${src_project_name}  all  e${d}  ${_des_pro_name}
     Select Rule And Replicate  rule${d}
-    FOR    ${item}    IN    @{target_images}
-        Log To Console  Check image replicated to Project ${_des_pro_name} ${item}
-        Image Should Be Replicated To Project  ${_des_pro_name}   ${item}  times=2
-    END
+    Run Keyword If  '${verify_verbose}'=='Y'  Verify Artifact Display Verbose  ${_des_pro_name}  @{target_images}
+    ...  ELSE  Verify Artifact Display  ${_des_pro_name}  @{target_images}
     Close Browser
+
+Verify Artifact Display Verbose
+    [Arguments]  ${pro_name}  @{target_images}
+    FOR    ${item}    IN    @{target_images}
+        ${item}=  Get Substring  ${item}  1  -1
+        ${item}=  Evaluate  ${item}
+        ${image}=  Get From Dictionary  ${item}  image
+        ${tag}=  Get From Dictionary  ${item}  tag
+        ${total_artifact_count}=  Get From Dictionary  ${item}  total_artifact_count
+        ${archive_count}=  Get From Dictionary  ${item}  archive_count
+        Log To Console  Check image ${image}:${tag} replication to Project ${pro_name}
+        Image Should Be Replicated To Project  ${pro_name}  ${image}  tag=${tag}  total_artifact_count=${total_artifact_count}  archive_count=${archive_count}  times=2
+    END
+
+Verify Artifact Display
+    [Arguments]  ${pro_name}  @{target_images}
+    FOR    ${item}    IN    @{target_images}
+        ${item}=  Get Substring  ${item}  1  -1
+        ${item}=  Evaluate  ${item}
+        ${image}=  Get From Dictionary  ${item}  image
+        Image Should Be Replicated To Project  ${pro_name}  ${image}  times=2
+    END
