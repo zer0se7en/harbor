@@ -251,7 +251,7 @@
         "QUOTA_UNLIMIT_TIP": "For unlimited quota enter '-1'.",
         "TYPE": "Type",
         "PROXY_CACHE": "Proxy Cache",
-        "PROXY_CACHE_TOOLTIP": "Enable this to allow this project to act as a pull-through cache for a particular target registry instance. Harbor can only act a proxy for DockerHub, Harbor, Aws ECR, Azure ACR, Quay and Google GCR registries.",
+        "PROXY_CACHE_TOOLTIP": "Enable this to allow this project to act as a pull-through cache for a particular target registry instance. Harbor can only act a proxy for DockerHub, Docker Registry, Harbor, Aws ECR, Azure ACR, Quay and Google GCR registries.",
         "ENDPOINT": "Endpoint",
         "PROXY_CACHE_ENDPOINT": "Proxy Cache Endpoint"
     },
@@ -629,7 +629,16 @@
         "ENABLE_SUCCESS": "Enabled rule successfully",
         "ENABLE_FAILED": "Enabling rule failed",
         "DISABLE_SUCCESS": "Disabled rule successfully",
-        "DISABLE_FAILED": "Disabling rule failed"
+        "DISABLE_FAILED": "Disabling rule failed",
+        "DES_REPO_FLATTENING": "Destination Repository Flattening",
+        "NAMESPACE": "Namespace",
+        "REPO_FLATTENING": "Flattening",
+        "NO_FLATTING": "No Flatting",
+        "FLATTEN_LEVEL_1": "Flatten 1 Level",
+        "FLATTEN_LEVEL_2": "Flatten 2 Levels",
+        "FLATTEN_LEVEL_3": "Flatten 3 Levels",
+        "FLATTEN_ALL": "Flatten All Levels",
+        "FLATTEN_LEVEL_TIP": "Reduce the nested repository structure when copying images. Default 'Flatten 1 Level' will replace the left most repository component with the destination namespace a/b/c/img -> ns/b/c/img. 'Flatten all Levels' is the legacy option used prior v2.3 resulting in a/b/c/img -> ns/img."
     },
     "DESTINATION": {
         "NEW_ENDPOINT": "Nuevo Endpoint",
@@ -802,7 +811,8 @@
         "MAINTAINER": "Maintainer(s)",
         "DEVELOPER": "Developer(s)",
         "GUEST": "Guest(s)",
-        "LIMITED_GUEST": "Limited guest(s)"
+        "LIMITED_GUEST": "Limited guest(s)",
+        "SEE_ALL": "SEE ALL"
     },
     "ALERT": {
         "FORM_CHANGE_CONFIRMATION": "Algunos cambios no se han guardado aún. ¿Quiere cancelar?"
@@ -991,16 +1001,14 @@
     },
     "TOP_REPO": "Repositorios Populares",
     "STATISTICS": {
-        "TITLE": "ESTADÍSTICAS",
         "PRO_ITEM": "PROYECTOS",
         "REPO_ITEM": "REPOSITORIOS",
         "INDEX_PRIVATE": "PRIVADO",
-        "INDEX_MY_PROJECTS": "MY PROJECTS",
-        "INDEX_MY_REPOSITORIES": "MY REPOSITORIES",
         "INDEX_PUB": "PÚBLICO",
         "INDEX_TOTAL": "TOTAL",
         "STORAGE": "ALMACENAMIENTO",
-        "LIMIT": "Límite"
+        "LIMIT": "Límite",
+        "STORAGE_USED": "Storage used"
     },
     "SEARCH": {
         "IN_PROGRESS": "Buscar...",
@@ -1152,7 +1160,8 @@
         "SAVE_SUCCESS": "Quota edit success",
         "UNLIMITED": "unlimited",
         "INVALID_INPUT": "invalid input",
-        "PLACEHOLDER": "We couldn't find any project quotas"
+        "PLACEHOLDER": "We couldn't find any project quotas",
+        "FILTER_PLACEHOLDER": "Search by name(exact match)"
     },
     "WEEKLY": {
         "MONDAY": "Monday",

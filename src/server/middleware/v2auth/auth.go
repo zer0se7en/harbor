@@ -19,6 +19,7 @@ import (
 	"fmt"
 	rbac_project "github.com/goharbor/harbor/src/common/rbac/project"
 	"github.com/goharbor/harbor/src/common/rbac/system"
+	"github.com/goharbor/harbor/src/lib/config"
 	"net/http"
 	"net/url"
 	"strings"
@@ -27,7 +28,6 @@ import (
 	"github.com/goharbor/harbor/src/common/rbac"
 	"github.com/goharbor/harbor/src/common/security"
 	"github.com/goharbor/harbor/src/controller/project"
-	"github.com/goharbor/harbor/src/core/config"
 	"github.com/goharbor/harbor/src/core/service/token"
 	"github.com/goharbor/harbor/src/lib"
 	"github.com/goharbor/harbor/src/lib/errors"
@@ -60,7 +60,8 @@ func (rc *reqChecker) check(req *http.Request) (string, error) {
 				return getChallenge(req, al), fmt.Errorf("unauthorized to list catalog")
 			}
 		}
-		if a.target == repository && req.Header.Get(authHeader) == "" && req.Method == http.MethodHead { // make sure 401 is returned for CLI HEAD, see #11271
+		if a.target == repository && req.Header.Get(authHeader) == "" &&
+			(req.Method == http.MethodHead || req.Method == http.MethodGet) { // make sure 401 is returned for CLI HEAD, see #11271
 			return getChallenge(req, al), fmt.Errorf("authorize header needed to send HEAD to repository")
 		} else if a.target == repository {
 			pn := strings.Split(a.name, "/")[0]

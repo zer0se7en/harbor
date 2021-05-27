@@ -250,7 +250,7 @@
         "QUOTA_UNLIMIT_TIP": "Für eine unbegrenzte Speicherbeschränkung '-1' eingeben.",
         "TYPE": "Typ",
         "PROXY_CACHE": "Proxy Cache",
-        "PROXY_CACHE_TOOLTIP": "Die Aktivierung der Funktion erlaubt es dem Projekt, als Cache für eine andere Registry Instanz zu dienen. Harbor unterstützt die Proxy Funktion nur für DockerHub, Harbor, Aws ECR, Azure ACR, Quay und Google GCR.",
+        "PROXY_CACHE_TOOLTIP": "Die Aktivierung der Funktion erlaubt es dem Projekt, als Cache für eine andere Registry Instanz zu dienen. Harbor unterstützt die Proxy Funktion nur für DockerHub, Docker Registry, Harbor, Aws ECR, Azure ACR, Quay und Google GCR.",
         "ENDPOINT": "Endpunkt",
         "PROXY_CACHE_ENDPOINT": "Proxy Cache Endpunkt"
     },
@@ -621,14 +621,23 @@
         "TAG": "Tag",
         "LABEL": "Label",
         "RESOURCE": "Ressource",
-	"ENABLE_TITLE": "Aktiviere Regel",
-	"ENABLE_SUMMARY": "Soll die Regel {{param}} aktiviert werden?",
-	"DISABLE_TITLE": "Deaktiviere Regel",
-	"DISABLE_SUMMARY": "Soll die Regel {{param}} deaktiviert werden?",
-	"ENABLE_SUCCESS": "Aktivieren der Regel erfolgreich",
+	    "ENABLE_TITLE": "Aktiviere Regel",
+	    "ENABLE_SUMMARY": "Soll die Regel {{param}} aktiviert werden?",
+	    "DISABLE_TITLE": "Deaktiviere Regel",
+	    "DISABLE_SUMMARY": "Soll die Regel {{param}} deaktiviert werden?",
+	    "ENABLE_SUCCESS": "Aktivieren der Regel erfolgreich",
         "ENABLE_FAILED": "Aktivieren der Regel fehlgeschlagen",
         "DISABLE_SUCCESS": "Deaktivieren der Regel erfolgreich",
-        "DISABLE_FAILED": "Deaktivieren der Regel fehlgeschlagen"
+        "DISABLE_FAILED": "Deaktivieren der Regel fehlgeschlagen",
+        "DES_REPO_FLATTENING": "Destination Repository Flattening",
+        "NAMESPACE": "Namespace",
+        "REPO_FLATTENING": "Flattening",
+        "NO_FLATTING": "No Flatting",
+        "FLATTEN_LEVEL_1": "Flatten 1 Level",
+        "FLATTEN_LEVEL_2": "Flatten 2 Levels",
+        "FLATTEN_LEVEL_3": "Flatten 3 Levels",
+        "FLATTEN_ALL": "Flatten All Levels",
+        "FLATTEN_LEVEL_TIP": "Reduce the nested repository structure when copying images. Default 'Flatten 1 Level' will replace the left most repository component with the destination namespace a/b/c/img -> ns/b/c/img. 'Flatten all Levels' is the legacy option used prior v2.3 resulting in a/b/c/img -> ns/img."
     },
     "DESTINATION": {
         "NEW_ENDPOINT": "Neuer Endpunkt",
@@ -801,7 +810,8 @@
         "MAINTAINER": "Maintainer(s)",
         "DEVELOPER": "Developer(s)",
         "GUEST": "Guest(s)",
-        "LIMITED_GUEST": "Limited guest(s)"
+        "LIMITED_GUEST": "Limited guest(s)",
+        "SEE_ALL": "SEE ALL"
     },
     "ALERT": {
         "FORM_CHANGE_CONFIRMATION": "Einige Änderungen wurden noch nicht gespeichert. Sollen diese verworfen werden?"
@@ -991,16 +1001,14 @@
     },
     "TOP_REPO": "Beliebte Repositories",
     "STATISTICS": {
-        "TITLE": "STATISTIKEN",
         "PRO_ITEM": "PROJEKTE",
         "REPO_ITEM": "REPOSITORIES",
         "INDEX_PRIVATE": "PRIVAT",
-        "INDEX_MY_PROJECTS": "MEINE PROJEKTE",
-        "INDEX_MY_REPOSITORIES": "MEINE REPOSITORIES",
         "INDEX_PUB": "ÖFFENTLICH",
         "INDEX_TOTAL": "GESAMT",
         "STORAGE": "SPEICHER",
-        "LIMIT": "Limit"
+        "LIMIT": "Limit",
+        "STORAGE_USED": "Storage used"
     },
     "SEARCH": {
         "IN_PROGRESS": "Suche...",
@@ -1151,7 +1159,8 @@
         "SAVE_SUCCESS": "Ändern der Begrenzung erfolgreich",
         "UNLIMITED": "unlimitiert",
         "INVALID_INPUT": "ungültige Eingabe",
-        "PLACEHOLDER": "Es konnten keine Begrenzungen gefunden werden"
+        "PLACEHOLDER": "Es konnten keine Begrenzungen gefunden werden",
+        "FILTER_PLACEHOLDER": "Search by name(exact match)"
     },
     "WEEKLY": {
         "MONDAY": "Montag",

@@ -247,7 +247,7 @@
     "QUOTA_UNLIMIT_TIP": "如果你想要對存儲不設置上限,請輸入-1。",
     "TYPE": "Type",
     "PROXY_CACHE": "Proxy Cache",
-    "PROXY_CACHE_TOOLTIP": "Enable this to allow this project to act as a pull-through cache for a particular target registry instance. Harbor can only act a proxy for DockerHub, Harbor, Aws ECR, Azure ACR, Quay and Google GCR registries.",
+    "PROXY_CACHE_TOOLTIP": "Enable this to allow this project to act as a pull-through cache for a particular target registry instance. Harbor can only act a proxy for DockerHub, Docker Registry, Harbor, Aws ECR, Azure ACR, Quay and Google GCR registries.",
     "ENDPOINT": "Endpoint",
     "PROXY_CACHE_ENDPOINT": "Proxy Cache Endpoint"
   },
@@ -625,7 +625,16 @@
     "ENABLE_SUCCESS": "Enabled rule successfully",
     "ENABLE_FAILED": "Enabling rule failed",
     "DISABLE_SUCCESS": "Disabled rule successfully",
-    "DISABLE_FAILED": "Disabling rule failed"
+    "DISABLE_FAILED": "Disabling rule failed",
+    "DES_REPO_FLATTENING": "Destination Repository Flattening",
+    "NAMESPACE": "Namespace",
+    "REPO_FLATTENING": "Flattening",
+    "NO_FLATTING": "No Flatting",
+    "FLATTEN_LEVEL_1": "Flatten 1 Level",
+    "FLATTEN_LEVEL_2": "Flatten 2 Levels",
+    "FLATTEN_LEVEL_3": "Flatten 3 Levels",
+    "FLATTEN_ALL": "Flatten All Levels",
+    "FLATTEN_LEVEL_TIP": "Reduce the nested repository structure when copying images. Default 'Flatten 1 Level' will replace the left most repository component with the destination namespace a/b/c/img -> ns/b/c/img. 'Flatten all Levels' is the legacy option used prior v2.3 resulting in a/b/c/img -> ns/img."
   },
   "DESTINATION":{
     "NEW_ENDPOINT": "新建目標",
@@ -799,7 +808,8 @@
     "MAINTAINER": "維護人員",
     "DEVELOPER": "開發者",
     "GUEST": "訪客",
-    "LIMITED_GUEST": "受限訪客"
+    "LIMITED_GUEST": "受限訪客",
+    "SEE_ALL": "SEE ALL"
   },
   "ALERT":{
     "FORM_CHANGE_CONFIRMATION": "表單內容改變,確認是否取消?"
@@ -987,16 +997,14 @@
   },
   "TOP_REPO": "受歡迎的鏡像倉庫",
   "STATISTICS":{
-    "TITLE": "統計",
     "PRO_ITEM": "項目",
     "REPO_ITEM": "鏡像倉庫",
     "INDEX_PRIVATE": "私有",
-    "INDEX_MY_PROJECTS": "我的項目",
-    "INDEX_MY_REPOSITORIES": "我的鏡像倉庫",
     "INDEX_PUB": "公開",
     "INDEX_TOTAL": "總計",
     "STORAGE": "存儲",
-    "LIMIT": "容量"
+    "LIMIT": "容量",
+    "STORAGE_USED": "Storage used"
   },
   "SEARCH":{
     "IN_PROGRESS": "搜索中...",
@@ -1141,7 +1149,8 @@
     "SAVE_SUCCESS": "項目容量修改成功",
     "UNLIMITED": "不設限",
     "INVALID_INPUT": "輸入錯誤",
-    "PLACEHOLDER": "我們找不到任何可以配置定額的項目"
+    "PLACEHOLDER": "我們找不到任何可以配置定額的項目",
+    "FILTER_PLACEHOLDER": "Search by name(exact match)"
   },
   "WEEKLY":{
     "MONDAY": "週一",
