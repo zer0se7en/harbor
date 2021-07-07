@@ -26,6 +26,7 @@ import (
 	ar "github.com/goharbor/harbor/src/controller/artifact"
 	"github.com/goharbor/harbor/src/controller/robot"
 	sc "github.com/goharbor/harbor/src/controller/scanner"
+	"github.com/goharbor/harbor/src/controller/tag"
 	"github.com/goharbor/harbor/src/jobservice/job"
 	"github.com/goharbor/harbor/src/lib"
 	"github.com/goharbor/harbor/src/lib/config"
@@ -61,6 +62,7 @@ const (
 	registrationKey = "registration"
 
 	artifactIDKey  = "artifact_id"
+	artifactTagKey = "artifact_tag"
 	reportUUIDsKey = "report_uuids"
 	robotIDKey     = "robot_id"
 )
@@ -77,6 +79,15 @@ type uuidGenerator func() (string, error)
 // utility methods.
 type configGetter func(cfg string) (string, error)
 
+// launchScanJobParam is a param to launch scan job.
+type launchScanJobParam struct {
+	ExecutionID  int64
+	Registration *scanner.Registration
+	Artifact     *ar.Artifact
+	Tag          string
+	Reports      []*scan.Report
+}
+
 // basicController is default implementation of api.Controller interface
 type basicController struct {
 	// Manage the scan report records
@@ -87,6 +98,8 @@ type basicController struct {
 	sc sc.Controller
 	// Robot account controller
 	rc robot.Controller
+	// Tag controller
+	tagCtl tag.Controller
 	// UUID generator
 	uuid uuidGenerator
 	// Configuration getter func
@@ -112,6 +125,8 @@ func NewController() Controller {
 		sc: sc.DefaultController,
 		// Refer to the default robot account controller
 		rc: robot.Ctl,
+		// Refer to the default tag controller
+		tagCtl: tag.Ctl,
 		// Generate UUID with uuid lib
 		uuid: func() (string, error) {
 			aUUID, err := uuid.NewUUID()
@@ -139,7 +154,7 @@ func NewController() Controller {
 		execMgr: task.ExecMgr,
 		taskMgr: task.Mgr,
 		// Get the scan V1 to V2 report converters
-		reportConverter: postprocessors.NewNativeToRelationalSchemaConverter(),
+		reportConverter: postprocessors.Converter,
 	}
 }
 
@@ -210,14 +225,16 @@ func (bc *basicController) Scan(ctx context.Context, artifact *ar.Artifact, opti
 		return errors.BadRequestError(nil).WithMessage("the configured scanner %s does not support scanning artifact with mime type %s", r.Name, artifact.ManifestMediaType)
 	}
 
-	type Param struct {
-		Artifact *ar.Artifact
-		Reports  []*scan.Report
+	// Parse options
+	opts, err := parseOptions(options...)
+	if err != nil {
+		return errors.Wrap(err, "scan controller: scan")
 	}
 
-	params := []*Param{}
-
-	var errs []error
+	var (
+		errs                []error
+		launchScanJobParams []*launchScanJobParam
+	)
 	for _, art := range artifacts {
 		reports, err := bc.makeReportPlaceholder(ctx, r, art)
 		if err != nil {
@@ -228,20 +245,33 @@ func (bc *basicController) Scan(ctx context.Context, artifact *ar.Artifact, opti
 			}
 		}
 
+		var tag string
+		if art.Digest == artifact.Digest {
+			tag = opts.Tag
+		}
+
+		if tag == "" {
+			latestTag, err := bc.getLatestTagOfArtifact(ctx, art.ID)
+			if err != nil {
+				return err
+			}
+
+			tag = latestTag
+		}
+
 		if len(reports) > 0 {
-			params = append(params, &Param{Artifact: art, Reports: reports})
+			launchScanJobParams = append(launchScanJobParams, &launchScanJobParam{
+				Registration: r,
+				Artifact:     art,
+				Tag:          tag,
+				Reports:      reports,
+			})
 		}
 	}
 
 	// all report placeholder conflicted
 	if len(errs) == len(artifacts) {
 		return errs[0]
-	}
-
-	// Parse options
-	opts, err := parseOptions(options...)
-	if err != nil {
-		return errors.Wrap(err, "scan controller: scan")
 	}
 
 	if opts.ExecutionID == 0 {
@@ -266,15 +296,17 @@ func (bc *basicController) Scan(ctx context.Context, artifact *ar.Artifact, opti
 	}
 
 	errs = errs[:0]
-	for _, param := range params {
-		if err := bc.launchScanJob(ctx, opts.ExecutionID, param.Artifact, r, param.Reports); err != nil {
+	for _, launchScanJobParam := range launchScanJobParams {
+		launchScanJobParam.ExecutionID = opts.ExecutionID
+
+		if err := bc.launchScanJob(ctx, launchScanJobParam); err != nil {
 			log.G(ctx).Warningf("scan artifact %s@%s failed, error: %v", artifact.RepositoryName, artifact.Digest, err)
 			errs = append(errs, err)
 		}
 	}
 
 	// all scanning of the artifacts failed
-	if len(errs) == len(params) {
+	if len(errs) == len(launchScanJobParams) {
 		return fmt.Errorf("scan artifact %s@%s failed", artifact.RepositoryName, artifact.Digest)
 	}
 
@@ -655,44 +687,6 @@ func (bc *basicController) GetScanLog(ctx context.Context, uuid string) ([]byte,
 	return b.Bytes(), nil
 }
 
-func (bc *basicController) UpdateReport(ctx context.Context, report *sca.CheckInReport) error {
-	rpl, err := bc.manager.GetBy(ctx, report.Digest, report.RegistrationUUID, []string{report.MimeType})
-	if err != nil {
-		return errors.Wrap(err, "scan controller: handle job hook")
-	}
-
-	logger := log.G(ctx)
-
-	if len(rpl) == 0 {
-		fields := log.Fields{
-			"report_digest":     report.Digest,
-			"registration_uuid": report.RegistrationUUID,
-			"mime_type":         report.MimeType,
-		}
-		logger.WithFields(fields).Warningf("no report found to update data")
-
-		return errors.NotFoundError(nil).WithMessage("no report found to update data")
-	}
-
-	logger.Debugf("Converting report ID %s to  the new V2 schema", rpl[0].UUID)
-
-	_, reportData, err := bc.reportConverter.ToRelationalSchema(ctx, rpl[0].UUID, rpl[0].RegistrationUUID, rpl[0].Digest, report.RawReport)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to convert vulnerability data to new schema for report UUID : %s", rpl[0].UUID)
-	}
-	// update the original report with the new summarized report with all vulnerability data removed.
-	// this is required since the top level layers relay on the vuln.Report struct that
-	// contains additional metadata within the report which if stored in the new columns within the scan_report table
-	// would be redundant
-	if err := bc.manager.UpdateReportData(ctx, rpl[0].UUID, reportData); err != nil {
-		return errors.Wrap(err, "scan controller: handle job hook")
-	}
-
-	logger.Debugf("Converted report ID %s to the new V2 schema", rpl[0].UUID)
-
-	return nil
-}
-
 // DeleteReports ...
 func (bc *basicController) DeleteReports(ctx context.Context, digests ...string) error {
 	if err := bc.manager.DeleteByDigests(ctx, digests...); err != nil {
@@ -745,6 +739,10 @@ func (bc *basicController) GetVulnerable(ctx context.Context, artifact *ar.Artif
 	raw, err := report.Reports(reports).ResolveData(mimeType)
 	if err != nil {
 		return nil, err
+	}
+
+	if raw == nil {
+		return vulnerable, nil
 	}
 
 	rp, ok := raw.(*vuln.Report)
@@ -829,14 +827,14 @@ func (bc *basicController) makeRobotAccount(ctx context.Context, projectID int64
 }
 
 // launchScanJob launches a job to run scan
-func (bc *basicController) launchScanJob(ctx context.Context, executionID int64, artifact *ar.Artifact, registration *scanner.Registration, reports []*scan.Report) error {
+func (bc *basicController) launchScanJob(ctx context.Context, param *launchScanJobParam) error {
 	// don't launch scan job for the artifact which is not supported by the scanner
-	if !hasCapability(registration, artifact) {
+	if !hasCapability(param.Registration, param.Artifact) {
 		return nil
 	}
 
 	var ck string
-	if registration.UseInternalAddr {
+	if param.Registration.UseInternalAddr {
 		ck = configCoreInternalAddr
 	} else {
 		ck = configRegistryEndpoint
@@ -847,7 +845,7 @@ func (bc *basicController) launchScanJob(ctx context.Context, executionID int64,
 		return errors.Wrap(err, "scan controller: launch scan job")
 	}
 
-	robot, err := bc.makeRobotAccount(ctx, artifact.ProjectID, artifact.RepositoryName, registration)
+	robot, err := bc.makeRobotAccount(ctx, param.Artifact.ProjectID, param.Artifact.RepositoryName, param.Registration)
 	if err != nil {
 		return errors.Wrap(err, "scan controller: launch scan job")
 	}
@@ -858,14 +856,15 @@ func (bc *basicController) launchScanJob(ctx context.Context, executionID int64,
 			URL: registryAddr,
 		},
 		Artifact: &v1.Artifact{
-			NamespaceID: artifact.ProjectID,
-			Repository:  artifact.RepositoryName,
-			Digest:      artifact.Digest,
-			MimeType:    artifact.ManifestMediaType,
+			NamespaceID: param.Artifact.ProjectID,
+			Repository:  param.Artifact.RepositoryName,
+			Digest:      param.Artifact.Digest,
+			Tag:         param.Tag,
+			MimeType:    param.Artifact.ManifestMediaType,
 		},
 	}
 
-	rJSON, err := registration.ToJSON()
+	rJSON, err := param.Registration.ToJSON()
 	if err != nil {
 		return errors.Wrap(err, "scan controller: launch scan job")
 	}
@@ -880,16 +879,16 @@ func (bc *basicController) launchScanJob(ctx context.Context, executionID int64,
 		return errors.Wrap(err, "launch scan job")
 	}
 
-	mimes := make([]string, len(reports))
-	reportUUIDs := make([]string, len(reports))
-	for i, report := range reports {
+	mimes := make([]string, len(param.Reports))
+	reportUUIDs := make([]string, len(param.Reports))
+	for i, report := range param.Reports {
 		mimes[i] = report.MimeType
 		reportUUIDs[i] = report.UUID
 	}
 
 	params := make(map[string]interface{})
 	params[sca.JobParamRegistration] = rJSON
-	params[sca.JobParameterAuthType] = registration.GetRegistryAuthorizationType()
+	params[sca.JobParameterAuthType] = param.Registration.GetRegistryAuthorizationType()
 	params[sca.JobParameterRequest] = sJSON
 	params[sca.JobParameterMimes] = mimes
 	params[sca.JobParameterRobot] = robotJSON
@@ -905,7 +904,8 @@ func (bc *basicController) launchScanJob(ctx context.Context, executionID int64,
 	// keep the report uuids in array so that when ?| operator support by the FilterRaw method of beego's orm
 	// we can list the tasks of the scan reports by one SQL
 	extraAttrs := map[string]interface{}{
-		artifactIDKey:  artifact.ID,
+		artifactIDKey:  param.Artifact.ID,
+		artifactTagKey: param.Tag,
 		robotIDKey:     robot.ID,
 		reportUUIDsKey: reportUUIDs,
 	}
@@ -919,7 +919,7 @@ func (bc *basicController) launchScanJob(ctx context.Context, executionID int64,
 		extraAttrs["report:"+reportUUID] = "1"
 	}
 
-	_, err = bc.taskMgr.Create(ctx, executionID, j, extraAttrs)
+	_, err = bc.taskMgr.Create(ctx, param.ExecutionID, j, extraAttrs)
 	return err
 }
 
@@ -1006,6 +1006,7 @@ func (bc *basicController) assembleReports(ctx context.Context, reports ...*scan
 		} else {
 			report.Status = job.ErrorStatus.String()
 		}
+
 		completeReport, err := bc.reportConverter.FromRelationalSchema(ctx, report.UUID, report.Digest, report.Report)
 		if err != nil {
 			return err
@@ -1014,6 +1015,20 @@ func (bc *basicController) assembleReports(ctx context.Context, reports ...*scan
 	}
 
 	return nil
+}
+
+func (bc *basicController) getLatestTagOfArtifact(ctx context.Context, artifactID int64) (string, error) {
+	query := q.New(q.KeyWords{"artifact_id": artifactID})
+	tags, err := bc.tagCtl.List(ctx, query.First(q.NewSort("push_time", true)), nil)
+	if err != nil {
+		return "", err
+	}
+
+	if len(tags) == 0 {
+		return "", nil
+	}
+
+	return tags[0].Name, nil
 }
 
 func getArtifactID(extraAttrs map[string]interface{}) int64 {
@@ -1025,6 +1040,17 @@ func getArtifactID(extraAttrs map[string]interface{}) int64 {
 	}
 
 	return int64(artifactID)
+}
+
+func getArtifactTag(extraAttrs map[string]interface{}) string {
+	var tag string
+	if extraAttrs != nil {
+		if v, ok := extraAttrs[artifactTagKey]; ok {
+			tag, _ = v.(string)
+		}
+	}
+
+	return tag
 }
 
 func getReportUUIDs(extraAttrs map[string]interface{}) []string {

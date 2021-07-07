@@ -14,7 +14,9 @@
         "INVALID_MSG": "Geçersiz kullanıcı adı veya şifre.",
         "FORGOT_PWD": "Parolamı Unuttum",
         "HEADER_LINK": "Oturum aç",
-        "CORE_SERVICE_NOT_AVAILABLE": "Core service is not available."
+        "CORE_SERVICE_NOT_AVAILABLE": "Core service is not available.",
+        "OR": "OR",
+        "VIA_LOCAL_DB": "LOGIN VIA LOCAL DB"
     },
     "SIGN_UP": {
         "TITLE": "Kayıt ol"
@@ -609,7 +611,7 @@
         "DELETE_ENABLED": "Bu politika etkinleştirildi",
         "NEW": "Yeni",
         "NAME_TOOLTIP": "Çoğaltma kuralı adı, en küçük harf, sayı ve ._- ile en az 2 karakter uzunluğunda olmalı ve karakter ya da sayılarla başlamalıdır.",
-        "DESTINATION_NAME_TOOLTIP": "Hedef adı, en az 2 karakter uzunluğunda, küçük harf, rakam ve ._-/ ile yazılmalı ve karakter veya rakamlarla başlamalıdır.",
+        "DESTINATION_NAME_TOOLTIP": "Hedef adı, en az 2 karakter uzunluğunda, küçük harf, rakam ve ._- ile yazılmalı ve karakter veya rakamlarla başlamalıdır.",
         "ACKNOWLEDGE": "Onaylamak",
         "RULE_DISABLED": "Bu kural, filtresinde kullanılan bir etiket silindiğinden dolayı devre dışı bırakıldı. \n Kuralı düzenleyin ve etkinleştirmek için filtresini güncelleyin.",
         "REPLI_MODE": "Çoğaltma modu",
@@ -617,7 +619,7 @@
         "SOURCE_NAMESPACES": "Kaynak ad alanları",
         "DEST_REGISTRY": "Hedef kaydı",
         "DEST_NAMESPACE": "Hedef ad alanı",
-        "NAMESPACE_TOOLTIP": "İsim alanı ismi en az 2 karakter uzunluğunda, küçük harfli karakterler, sayılar ve ._- ile başlamalı ve karakter veya sayılarla başlamalıdır. Ad alanı adı en az 2 karakter uzunluğunda, küçük harf, rakam ve ._- ile başlamalı ve karakter veya rakamlarla başlamalıdır.",
+        "NAMESPACE_TOOLTIP": "İsim alanı ismi en az 2 karakter uzunluğunda, küçük harfli karakterler, sayılar ve ._-/ ile başlamalı ve karakter veya sayılarla başlamalıdır. Ad alanı adı en az 2 karakter uzunluğunda, küçük harf, rakam ve ._- ile başlamalı ve karakter veya rakamlarla başlamalıdır.",
         "TAG": "Etiketlemek",
         "LABEL": "Etiket",
         "RESOURCE": "Kaynak",
@@ -637,7 +639,13 @@
         "FLATTEN_LEVEL_2": "Flatten 2 Levels",
         "FLATTEN_LEVEL_3": "Flatten 3 Levels",
         "FLATTEN_ALL": "Flatten All Levels",
-        "FLATTEN_LEVEL_TIP": "Reduce the nested repository structure when copying images. Default 'Flatten 1 Level' will replace the left most repository component with the destination namespace a/b/c/img -> ns/b/c/img. 'Flatten all Levels' is the legacy option used prior v2.3 resulting in a/b/c/img -> ns/img."
+        "FLATTEN_LEVEL_TIP": "Reduce the nested repository structure when copying images. Assuming that the nested repository structure is 'a/b/c/d/img' and the destination namespace is 'ns', the corresponding results of each item are as below:",
+        "FLATTEN_LEVEL_TIP_ALL": "'Flatten All Levels'(Used prior v2.3): 'a/b/c/d/img' -> 'ns/img'",
+        "FLATTEN_LEVEL_TIP_NO": "'No Flatting': 'a/b/c/d/img' -> 'ns/a/b/c/d/img",
+        "FLATTEN_LEVEL_TIP_1": "'Flatten 1 Level'(Default): 'a/b/c/d/img' -> 'ns/b/c/d/img'",
+        "FLATTEN_LEVEL_TIP_2": "'Flatten 2 Levels': 'a/b/c/d/img' -> 'ns/c/d/img'",
+        "FLATTEN_LEVEL_TIP_3": "'Flatten 3 Levels': 'a/b/c/d/img' -> 'ns/d/img'",
+        "NOTE": "Notes: The Chartmuseum Charts only support the repository structure with 2 path components: `a/chart`"
     },
     "DESTINATION": {
         "NEW_ENDPOINT": "Yeni Uç Nokta",

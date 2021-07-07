@@ -2697,6 +2697,11 @@ paths:
         - usergroup
       parameters:
         - $ref: '#/parameters/requestId'
+        - name: ldap_group_dn
+          in: query
+          type: string
+          required: false
+          description: search with ldap group DN
       responses:
         '200':
           description: Get user group successfully.
@@ -5656,10 +5661,12 @@ definitions:
         type: integer
         format: int64
         description: The count of the artifacts inside the repository
+        x-omitempty: false
       pull_count:
         type: integer
         format: int64
         description: The count that the artifact inside the repository pulled
+        x-omitempty: false
       creation_time:
         type: string
         format: date-time
@@ -7986,7 +7993,7 @@ definitions:
               daily_time:
                 type: integer
                 description: 'The offset in seconds of UTC 0 o''clock, only valid when the policy type is "daily"'
-            description: 'The parameters of the policy, the values are dependant on the type of the policy.'
+            description: 'The parameters of the policy, the values are dependent on the type of the policy.'
   Configurations:
     type: object
     properties: 
@@ -8270,27 +8277,33 @@ definitions:
     properties:
       value:
         type: string
+        x-omitempty: false
         description: The string value of current config item
       editable:
         type: boolean
+        x-omitempty: false
         description: The configure item can be updated or not
   BoolConfigItem:
     type: object
     properties:
       value:
         type: boolean
+        x-omitempty: false
         description: The boolean value of current config item
       editable:
         type: boolean
+        x-omitempty: false
         description: The configure item can be updated or not
   IntegerConfigItem:
     type: object
     properties:
       value:
         type: integer
+        x-omitempty: false
         description: The integer value of current config item
       editable:
         type: boolean
+        x-omitempty: false
         description: The configure item can be updated or not
   ProjectMemberEntity:
     type: object

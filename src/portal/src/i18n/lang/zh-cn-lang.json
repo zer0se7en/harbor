@@ -14,7 +14,9 @@
         "INVALID_MSG": "用户名或者密码不正确。",
         "FORGOT_PWD": "忘记密码",
         "HEADER_LINK": "登录",
-        "CORE_SERVICE_NOT_AVAILABLE": "核心服务不可用。"
+        "CORE_SERVICE_NOT_AVAILABLE": "核心服务不可用。",
+        "OR": "或",
+        "VIA_LOCAL_DB": "通过本地数据库登录"
     },
     "SIGN_UP": {
         "TITLE": "注册"
@@ -611,7 +613,7 @@
         "DELETE_ENABLED": "默认启用该规则",
         "NEW": "新增",
         "NAME_TOOLTIP": "项目名称由小写字符、数字和._-组成且至少2个字符并以字符或者数字开头。",
-        "DESTINATION_NAME_TOOLTIP": "名称空间由小写字符、数字和._-/组成且至少2个字符并以字符或者数字开头。",
+        "DESTINATION_NAME_TOOLTIP": "名称空间由小写字符、数字和._-组成且至少2个字符并以字符或者数字开头。",
         "ACKNOWLEDGE": "确认",
         "RULE_DISABLED": "这个规则因为过滤选项中的标签被删除已经不能用了，更新过滤项以便重新启用规则。",
         "REPLI_MODE": "复制模式",
@@ -619,7 +621,7 @@
         "SOURCE_NAMESPACES": "源名称空间",
         "DEST_REGISTRY": "目标仓库",
         "DEST_NAMESPACE": "目标名称空间",
-        "NAMESPACE_TOOLTIP": "名称空间名称由小写字符、数字和._-组成且至少2个字符并以字符或者数字开头。",
+        "NAMESPACE_TOOLTIP": "名称空间名称由小写字符、数字和._-/组成且至少2个字符并以字符或者数字开头。",
         "TAG": "Tag",
         "LABEL": "标签",
         "RESOURCE": "资源",
@@ -639,7 +641,13 @@
         "FLATTEN_LEVEL_2": "替换2级",
         "FLATTEN_LEVEL_3": "替换3级",
         "FLATTEN_ALL": "替换所有级",
-        "FLATTEN_LEVEL_TIP": "此项用以在复制镜像时减少仓库的层级结构。默认值'替换1级'表示将用目标名称空间替换仓库的最左侧一级，例如：a/b/c/img -> namespace/b/c/img，其他替换层级以此类推。'替换所有级'是v2.3之前版本所使用的行为，它表示 a/b/c/img -> namespace/img。"
+        "FLATTEN_LEVEL_TIP": "此项用以在复制镜像时减少仓库的层级结构。假设仓库的层级结构为 'a/b/c/d/img' 且目标名称空间为 'ns'，则每一项对应的结果如下：",
+        "FLATTEN_LEVEL_TIP_ALL": "'替换所有级'(v2.3之前版本所使用的行为): 'a/b/c/d/img' -> 'ns/img'",
+        "FLATTEN_LEVEL_TIP_NO": "'无替换': 'a/b/c/d/img' -> 'ns/a/b/c/d/img",
+        "FLATTEN_LEVEL_TIP_1": "'替换1级'(默认项): 'a/b/c/d/img' -> 'ns/b/c/d/img'",
+        "FLATTEN_LEVEL_TIP_2": "'替换2级': 'a/b/c/d/img' -> 'ns/c/d/img'",
+        "FLATTEN_LEVEL_TIP_3": "'替换3级': 'a/b/c/d/img' -> 'ns/d/img'",
+        "NOTE": "注意: Chartmuseum Charts 仅支持2层的仓库结构：如 `a/chart`"
     },
     "DESTINATION": {
         "NEW_ENDPOINT": "新建目标",
